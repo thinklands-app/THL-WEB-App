@@ -64,9 +64,10 @@
         /* 2. カメラ画面 */
         #camera-screen { display: none; position: relative; width: 100vw; height: 100dvh; background: #000; }
         #video-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        video { height: 100%; width: auto; object-fit: cover; transition: transform 0.2s; transform-origin: center center; }
+        /* 【変更】最初から2倍に引き伸ばして表示（元が4Kなのでボケません） */
+        video { height: 100%; width: auto; object-fit: cover; transform: scale(2); transform-origin: center center; }
         
-        /* ガイド枠 */
+        /* ガイド枠（見やすい大きさのまま維持） */
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         .guide-box { position: absolute; box-sizing: border-box; border-width: 2px; border-style: solid; }
         
@@ -88,12 +89,8 @@
             width: 70px; height: 70px; border-radius: 50%;
             background: #fff; border: 6px solid rgba(255,255,255,0.3); pointer-events: auto;
         }
-        #zoom-controls { position: absolute; bottom: 30px; right: 30px; display: flex; gap: 10px; pointer-events: auto; }
-        .zoom-btn {
-            width: 50px; height: 50px; border-radius: 50%; background: rgba(0, 0, 0, 0.5); border: 2px solid #fff;
-            color: #fff; font-weight: bold; display: flex; align-items: center; justify-content: center;
-        }
-        .zoom-btn.active { background: #007aff; }
+
+        /* ズームボタンコントロールUIは完全に削除 */
 
         /* 3. 結果画面 */
         #result-screen { display: none; background: #000; }
@@ -146,10 +143,6 @@
             <div id="box-orange" class="guide-box"></div>
             <div id="box-green" class="guide-box"></div>
             <div id="shutter-btn" onclick="takePicture()"></div>
-            <div id="zoom-controls">
-                <div id="zoom-1x" class="zoom-btn active" onclick="setZoom(1)">×1</div>
-                <div id="zoom-2x" class="zoom-btn" onclick="setZoom(2)">×2</div>
-            </div>
         </div>
     </div>
 
@@ -170,7 +163,7 @@
 
     <script>
         // =================================================================
-        // 【要設定】先ほどコピーしたGASのウェブアプリURLをここに貼り付けてください
+        // 【要設定】ご自身のGASウェブアプリURLをここに貼り付けてください
         // =================================================================
         const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzBy5afDWgMpIwN0fZhj81C-pztMc5FbA12ziHsM1aaCXYkCyqqw3xX17LvwYKIaCZi/exec"; 
         const AUTH_PASSWORD = "micro2026"; 
@@ -179,7 +172,7 @@
         let config = { target: 5.00, stroke: 6.5 };
         let isPoseOk = false;
         let streamRef = null;
-        let currentZoom = 1;
+        let currentZoom = 2; // 【変更】内部倍率を「2倍固定」に設定
         let isSensorInitialized = false;
 
         function checkPassword() {
@@ -247,13 +240,11 @@
             initCamera();
         }
 
-        // 【更新箇所】エラーを強力に回避しつつ、スマホの限界解像度を強制ドローするロジック
         async function initCamera() {
             if (streamRef) return; 
             const video = document.getElementById('video');
             const btn = document.getElementById('next-btn');
             
-            // 範囲指定constraints方式で最高画質を要求
             const constraints = {
                 video: { 
                     facingMode: "environment",
@@ -296,13 +287,6 @@
             }
         }
 
-        function setZoom(scale) {
-            currentZoom = scale;
-            document.getElementById('video').style.transform = `scale(${scale})`;
-            document.getElementById('zoom-1x').className = `zoom-btn ${scale===1?'active':''}`;
-            document.getElementById('zoom-2x').className = `zoom-btn ${scale===2?'active':''}`;
-        }
-
         function handleOrientation(event) {
             const beta = event.beta; const gamma = event.gamma; 
             const indicator = document.getElementById('status-indicator');
@@ -331,6 +315,7 @@
             const ctx = canvas.getContext('2d');
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             
+            // 【重要】4K解像度の中心から、綺麗に2倍ズームエリアを切り出す（無劣化抽出）
             const sw = canvas.width / currentZoom; const sh = canvas.height / currentZoom;
             const sx = (canvas.width - sw) / 2; const sy = (canvas.height - sh) / 2;
             ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
@@ -368,7 +353,6 @@
             document.getElementById('setup-screen').style.display = 'flex';
             window.removeEventListener('deviceorientation', handleOrientation);
             isSensorInitialized = false;
-            setZoom(1);
         }
     </script>
 </body>
