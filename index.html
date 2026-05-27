@@ -62,34 +62,32 @@
         /* 2. カメラ画面 */
         #camera-screen { display: none; position: relative; width: 100vw; height: 100dvh; background: #000; overflow: hidden; }
         
-        /* ビdeoコンテナ（純粋に映像だけを中央で2倍にする） */
+        /* 【絶対同期コンテナ】ビデオとガイド枠を同じ16:9空間に閉じ込めて丸ごと2倍にする */
         #video-container { 
             position: absolute; top: 50%; left: 50%;
-            width: 100vw; height: 56.25vw; /* 16:9 */
+            width: 100vw; height: 56.25vw; /* 16:9比率 */
             max-height: 100dvh; max-width: 177.78dvh; aspect-ratio: 16 / 9;
-            transform: translate(-50%, -50%) scale(2); 
+            transform: translate(-50%, -50%) scale(2); /* 中央基準で2倍拡大 */
             overflow: hidden; z-index: 5;
         }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
         
-        /* 🌟【大改造】ガイド枠を表示される16:9の「実画面サイズ」に完全固定（拡大しない外側に配置） */
+        /* 🌟【大改造】ビデオと1:1で重なるインラインオーバーレイに変更（位置ズレを完全相殺） */
         #guide-overlay { 
-            position: absolute; top: 50%; left: 50%;
-            width: 100vw; height: 56.25vw;
-            max-height: 100dvh; max-width: 177.78dvh; aspect-ratio: 16 / 9;
-            transform: translate(-50%, -50%);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 15; 
         }
-        .guide-box { position: absolute; box-sizing: border-box; border-width: 2px; border-style: solid; }
+        /* 親コンテナごと2倍されるため、線の太さは1pxにしておくと画面上で2px（丁度いい太さ）になります */
+        .guide-box { position: absolute; box-sizing: border-box; border-width: 1px; border-style: solid; }
         
-        /* 🌟 OpenCVのコード（check.py）のROI比率と1%の狂いもなく完全同期 */
+        /* OpenCV(check.py)のROI割合（30%〜65%等）と100%完全一致の座標指定 */
         #box-blue { top: 38%; height: 24%; left: 30%; width: 35%; border-color: rgba(0, 0, 255, 0.8); }
-        #center-line { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background-color: rgba(255, 0, 0, 0.8); }
+        #center-line { position: absolute; top: 50%; left: 0; width: 100%; height: 0.5px; background-color: rgba(255, 0, 0, 0.8); }
         #box-purple { top: 42.2%; height: 15.6%; left: 36%; width: 17%; border-color: rgba(255, 0, 255, 0.8); }
         #box-green { top: 32.2%; height: 35.6%; left: 52%; width: 12%; border-color: rgba(0, 255, 0, 0.8); }
         #box-orange { top: 32.2%; height: 35.6%; left: 49%; width: 3%; border-color: rgba(255, 165, 0, 0.8); }
 
-        /* UIオーバーレイ */
+        /* UIオーバーレイ（シャッターやインジケータは画面端に固定し、2倍拡大させない） */
         #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
         #status-indicator {
             position: absolute; top: env(safe-area-inset-top, 20px); left: 50%; transform: translateX(-50%);
@@ -146,14 +144,15 @@
     </div>
 
     <div id="camera-screen">
-        <div id="video-container"><video id="video" autoplay playsinline></video></div>
-        
-        <div id="guide-overlay">
-            <div id="box-blue" class="guide-box"></div>
-            <div id="center-line"></div>
-            <div id="box-purple" class="guide-box"></div>
-            <div id="box-orange" class="guide-box"></div>
-            <div id="box-green" class="guide-box"></div>
+        <div id="video-container">
+            <video id="video" autoplay playsinline></video>
+            <div id="guide-overlay">
+                <div id="box-blue" class="guide-box"></div>
+                <div id="center-line"></div>
+                <div id="box-purple" class="guide-box"></div>
+                <div id="box-orange" class="guide-box"></div>
+                <div id="box-green" class="guide-box"></div>
+            </div>
         </div>
         
         <div id="ui-overlay">
@@ -276,8 +275,6 @@
 
                 config.target = parseFloat(document.getElementById('target-val').value);
                 config.stroke = document.querySelector('input[name="stroke"]:checked').value;
-                
-                // ※Python側の固定ROIに追従させるため、JavaScriptでの枠サイズ変動ロジックは撤廃しました。
 
                 document.getElementById('setup-screen').style.display = 'none';
                 document.getElementById('camera-screen').style.display = 'block';
@@ -327,7 +324,6 @@
             const ctx = canvas.getContext('2d');
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             
-            // 4K解像度の中心から、綺麗に2倍ズームエリアを切り出す（画面の16:9表示範囲と100%合致します）
             const sw = canvas.width / currentZoom; const sh = canvas.height / currentZoom;
             const sx = (canvas.width - sw) / 2; const sy = (canvas.height - sh) / 2;
             ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
