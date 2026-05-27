@@ -62,32 +62,37 @@
         /* 2. カメラ画面 */
         #camera-screen { display: none; position: relative; width: 100vw; height: 100dvh; background: #000; overflow: hidden; }
         
-        /* 【絶対同期コンテナ】ビデオとガイド枠を同じ16:9空間に閉じ込めて丸ごと2倍にする */
-        #video-container { 
+        /* 🌟【最重要】ここが「実際に見えている16:9の箱」の絶対基準になります */
+        #camera-box { 
             position: absolute; top: 50%; left: 50%;
             width: 100vw; height: 56.25vw; /* 16:9比率 */
             max-height: 100dvh; max-width: 177.78dvh; aspect-ratio: 16 / 9;
-            transform: translate(-50%, -50%) scale(2); /* 中央基準で2倍拡大 */
+            transform: translate(-50%, -50%);
             overflow: hidden; z-index: 5;
         }
-        video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+
+        /* ビデオ要素は、16:9の箱の中で「単体で2倍」にします（はみ出た部分はカット） */
+        video { 
+            width: 100%; height: 100%; object-fit: cover; 
+            transform: scale(2); transform-origin: center center;
+        }
         
-        /* 🌟【大改造】ビデオと1:1で重なるインラインオーバーレイに変更（位置ズレを完全相殺） */
+        /* 🌟【大修正】ガイド枠は、16:9の箱に対して「等倍（scaleなし）」でぴったり重ねます */
         #guide-overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 15; 
+            pointer-events: none; z-index: 10; 
         }
-        /* 親コンテナごと2倍されるため、線の太さは1pxにしておくと画面上で2px（丁度いい太さ）になります */
-        .guide-box { position: absolute; box-sizing: border-box; border-width: 1px; border-style: solid; }
+        /* 等倍の部屋に戻ったので、線の太さは通常の「2px」でクッキリ描画します */
+        .guide-box { position: absolute; box-sizing: border-box; border-width: 2px; border-style: solid; }
         
-        /* OpenCV(check.py)のROI割合（30%〜65%等）と100%完全一致の座標指定 */
+        /* OpenCV(check.py)のROI割合（30%〜65%等）と1:1で完全シンクロするパーセンテージ指定 */
         #box-blue { top: 38%; height: 24%; left: 30%; width: 35%; border-color: rgba(0, 0, 255, 0.8); }
-        #center-line { position: absolute; top: 50%; left: 0; width: 100%; height: 0.5px; background-color: rgba(255, 0, 0, 0.8); }
+        #center-line { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background-color: rgba(255, 0, 0, 0.8); }
         #box-purple { top: 42.2%; height: 15.6%; left: 36%; width: 17%; border-color: rgba(255, 0, 255, 0.8); }
         #box-green { top: 32.2%; height: 35.6%; left: 52%; width: 12%; border-color: rgba(0, 255, 0, 0.8); }
         #box-orange { top: 32.2%; height: 35.6%; left: 49%; width: 3%; border-color: rgba(255, 165, 0, 0.8); }
 
-        /* UIオーバーレイ（シャッターやインジケータは画面端に固定し、2倍拡大させない） */
+        /* UIオーバーレイ（シャッターボタン等） */
         #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
         #status-indicator {
             position: absolute; top: env(safe-area-inset-top, 20px); left: 50%; transform: translateX(-50%);
@@ -144,7 +149,7 @@
     </div>
 
     <div id="camera-screen">
-        <div id="video-container">
+        <div id="camera-box">
             <video id="video" autoplay playsinline></video>
             <div id="guide-overlay">
                 <div id="box-blue" class="guide-box"></div>
@@ -280,15 +285,14 @@
                 document.getElementById('camera-screen').style.display = 'block';
 
             } catch (err) {
-                console.log("高解像度カメラ起動エラー、通常モードで再試行します:", err);
+                console.log("高解像度カメラ起動エラー:", err);
                 try {
                     streamRef = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
                     video.srcObject = streamRef;
-                    
                     document.getElementById('setup-screen').style.display = 'none';
                     document.getElementById('camera-screen').style.display = 'block';
                 } catch(err2) {
-                    alert("カメラの起動に失敗しました。カメラアクセス権限を確認してください。");
+                    alert("カメラの起動に失敗しました。");
                 }
             } finally {
                 btn.innerText = "2. カメラを起動して撮影開始";
@@ -324,6 +328,7 @@
             const ctx = canvas.getContext('2d');
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             
+            // 4K解像度の中心から、綺麗に2倍ズームエリアを切り出す（これがスマホ画面の見た目と100%完全一致します）
             const sw = canvas.width / currentZoom; const sh = canvas.height / currentZoom;
             const sx = (canvas.width - sw) / 2; const sy = (canvas.height - sh) / 2;
             ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
