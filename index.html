@@ -36,7 +36,6 @@
         }
         .radio-btn input:checked + span { background: #007aff; border-color: #007aff; }
         
-        /* センサーボタン */
         #sensor-btn {
             width: 100%; max-width: 300px; padding: 14px; background: #ff9500;
             border: none; border-radius: 8px; color: #fff; font-size: 16px;
@@ -44,7 +43,6 @@
         }
         #sensor-btn.ok { background: #4cd964; pointer-events: none; }
 
-        /* カメラ起動ボタン */
         #next-btn {
             width: 100%; max-width: 300px; padding: 16px; background: #444;
             border: none; border-radius: 8px; color: #888; font-size: 18px;
@@ -62,12 +60,24 @@
         }
 
         /* 2. カメラ画面 */
-        #camera-screen { display: none; position: relative; width: 100vw; height: 100dvh; background: #000; }
-        #video-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        video { height: 100%; width: auto; object-fit: cover; transform: scale(2); transform-origin: center center; }
+        #camera-screen { display: none; position: relative; width: 100vw; height: 100dvh; background: #000; overflow: hidden; }
         
-        /* ガイド枠 */
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        /* 【大改良】ビデオとガイド枠を「16:9の仮想コンテナ」に完全固定し、中央基準で丸ごと2倍拡大する */
+        #video-container { 
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 100vw;
+            height: 56.25vw; /* 16:9比率 */
+            max-height: 100dvh;
+            max-width: 177.78dvh;
+            aspect-ratio: 16 / 9;
+            transform: translate(-50%, -50%) scale(2); /* 画面中央で無劣化2倍表示 */
+            overflow: hidden;
+        }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* ガイド枠オーバーレイ（16:9の動画領域に完全にシンクロ） */
+        #guide-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         .guide-box { position: absolute; box-sizing: border-box; border-width: 2px; border-style: solid; }
         
         #box-blue { top: 38%; height: 24%; left: 35%; width: 30%; border-color: rgba(0, 0, 255, 0.8); }
@@ -76,6 +86,8 @@
         #box-green { top: 38.5%; height: 23%; left: 54%; width: 10%; border-color: rgba(0, 255, 0, 0.8); }
         #box-orange { top: 38.5%; height: 23%; left: 51%; width: 3%; border-color: rgba(255, 165, 0, 0.8); }
 
+        /* UI専用オーバーレイ（画面に固定し、2倍拡大させない） */
+        #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
         #status-indicator {
             position: absolute; top: env(safe-area-inset-top, 20px); left: 50%; transform: translateX(-50%);
             padding: 10px 20px; border-radius: 30px; background: rgba(0, 0, 0, 0.8);
@@ -89,7 +101,7 @@
             background: #fff; border: 6px solid rgba(255,255,255,0.3); pointer-events: auto;
         }
 
-        /* 結果画面 */
+        /* 3. 結果画面 */
         #result-screen { display: none; background: #000; }
         #result-canvas { width: 100%; max-width: 500px; border-radius: 8px; margin-bottom: 15px; }
         .result-box { font-size: 24px; font-weight: bold; margin-bottom: 8px; }
@@ -131,14 +143,19 @@
     </div>
 
     <div id="camera-screen">
-        <div id="video-container"><video id="video" autoplay playsinline></video></div>
-        <div id="overlay">
+        <div id="video-container">
+            <video id="video" autoplay playsinline></video>
+            <div id="guide-overlay">
+                <div id="box-blue" class="guide-box"></div>
+                <div id="center-line"></div>
+                <div id="box-purple" class="guide-box"></div>
+                <div id="box-orange" class="guide-box"></div>
+                <div id="box-green" class="guide-box"></div>
+            </div>
+        </div>
+        
+        <div id="ui-overlay">
             <div id="status-indicator">長辺を水平にして、中心線に合わせてください</div>
-            <div id="box-blue" class="guide-box"></div>
-            <div id="center-line"></div>
-            <div id="box-purple" class="guide-box"></div>
-            <div id="box-orange" class="guide-box"></div>
-            <div id="box-green" class="guide-box"></div>
             <div id="shutter-btn" onclick="takePicture()"></div>
         </div>
     </div>
@@ -312,6 +329,7 @@
             const ctx = canvas.getContext('2d');
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             
+            // 4K解像度の中心から、綺麗に2倍ズームエリアを切り出す（これがスマホ画面の見え方と完全一致します）
             const sw = canvas.width / currentZoom; const sh = canvas.height / currentZoom;
             const sx = (canvas.width - sw) / 2; const sy = (canvas.height - sh) / 2;
             ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
@@ -344,11 +362,9 @@
             }
         }
 
-        // 【大修正】一度取得したセンサー（ジャイロ）は解除せず、UIの「有効状態」もキープする
         function resetToSetup() {
             document.getElementById('result-screen').style.display = 'none';
             document.getElementById('setup-screen').style.display = 'flex';
-            // window.removeEventListener と isSensorInitialized = false を完全に削除しました。
         }
     </script>
 </body>
