@@ -64,7 +64,7 @@
         
         #camera-box { 
             position: absolute; top: 50%; left: 50%;
-            width: 100vw; height: 56.25vw; /* 16:9比率 */
+            width: 100vw; height: 56.25vw; 
             max-height: 100dvh; max-width: 177.78dvh; aspect-ratio: 16 / 9;
             transform: translate(-50%, -50%); overflow: hidden; z-index: 5;
         }
@@ -73,7 +73,6 @@
         #guide-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         .guide-box { position: absolute; box-sizing: border-box; border-width: 2px; border-style: solid; transition: all 0.2s ease-out; }
         
-        /* 🌟 初期値をセット（JavaScriptでTARGET_VALUEに合わせて動的に上書きされます） */
         #box-blue { top: 38%; height: 24%; left: 30%; width: 35%; border-color: rgba(0, 0, 255, 0.8); }
         #center-line { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background-color: rgba(255, 0, 0, 0.8); }
         #box-purple { top: 42.2%; height: 15.6%; left: 36%; width: 17%; border-color: rgba(255, 0, 255, 0.8); }
@@ -175,14 +174,11 @@
         let isSensorInitialized = false;
 
         function checkPassword() {
-            const passInput = document.getElementById('app-pass').value;
-            if (passInput === AUTH_PASSWORD) {
+            if (document.getElementById('app-pass').value === AUTH_PASSWORD) {
                 document.getElementById('password-screen').style.display = 'none';
                 document.getElementById('setup-screen').style.display = 'flex';
-                updateRoiFrames(); // 起動時に初期枠計算
-            } else {
-                alert("パスワードが違います。");
-            }
+                updateRoiFrames(); 
+            } else { alert("パスワードが違います。"); }
         }
 
         function limitDecimalPlaces(element, maxPlaces) {
@@ -195,31 +191,24 @@
             }
         }
 
-        // 🌟【新機能】目標値に合わせて青枠と紫枠を動的に縮小シフトする魔法のロジック
+        // 🌟【改善】1.0mmの下限限界ストッパーを搭載
         function updateRoiFrames() {
             const targetVal = parseFloat(document.getElementById('target-val').value) || 0;
             
-            // 5.0mmを基準線とし、0mmに近づくほど左側を右へ詰める（1mmあたり2.5%シフト）
-            const shiftPercent = (5.0 - targetVal) * 2.5; 
+            // 🌟 ユーザー提案：1.0mm未満の場合は1.0mmのサイズでストップさせる
+            let clampedTarget = targetVal;
+            if (clampedTarget < 1.0) clampedTarget = 1.0;
+            
+            const shiftPercent = (5.0 - clampedTarget) * 2.5; 
             
             const boxBlue = document.getElementById('box-blue');
             const boxPurple = document.getElementById('box-purple');
             
-            // 青枠（初期 left: 30%, width: 35%）の可変制御
-            let blueLeft = 30 + shiftPercent;
-            let blueWidth = 35 - shiftPercent;
-            if (blueLeft > 52) { blueLeft = 52; blueWidth = 13; } // 限界ガード
-            if (blueLeft < 30) { blueLeft = 30; blueWidth = 35; }
-            boxBlue.style.left = blueLeft + "%";
-            boxBlue.style.width = blueWidth + "%";
+            let blueLeft = 30 + shiftPercent; let blueWidth = 35 - shiftPercent;
+            boxBlue.style.left = blueLeft + "%"; boxBlue.style.width = blueWidth + "%";
             
-            // 紫枠（初期 left: 36%, width: 17%）の可変制御
-            let purpleLeft = 36 + shiftPercent;
-            let purpleWidth = 17 - shiftPercent;
-            if (purpleLeft > 48) { purpleLeft = 48; purpleWidth = 5; } // 限界ガード
-            if (purpleLeft < 36) { purpleLeft = 36; purpleWidth = 17; }
-            boxPurple.style.left = purpleLeft + "%";
-            boxPurple.style.width = purpleWidth + "%";
+            let purpleLeft = 36 + shiftPercent; let purpleWidth = 17 - shiftPercent;
+            boxPurple.style.left = purpleLeft + "%"; boxPurple.style.width = purpleWidth + "%";
         }
 
         async function enableSensor() {
@@ -228,26 +217,20 @@
                     const state = await DeviceOrientationEvent.requestPermission();
                     if (state === 'granted') {
                         window.addEventListener('deviceorientation', handleOrientation);
-                        isSensorInitialized = true;
-                        activateNextButton();
+                        isSensorInitialized = true; activateNextButton();
                     } else { alert("センサーの許可が拒否されました。"); }
                 } catch (e) { alert("センサー申請エラー。"); }
             } else {
                 window.addEventListener('deviceorientation', handleOrientation);
-                isSensorInitialized = true;
-                activateNextButton();
+                isSensorInitialized = true; activateNextButton();
             }
         }
 
         function activateNextButton() {
             const sBtn = document.getElementById('sensor-btn');
-            sBtn.innerText = "✓ 傾きセンサー有効";
-            sBtn.className = "ok";
+            sBtn.innerText = "✓ 傾きセンサー有効"; sBtn.className = "ok";
             const nBtn = document.getElementById('next-btn');
-            nBtn.disabled = false;
-            nBtn.style.background = "#007aff";
-            nBtn.style.color = "#fff";
-            nBtn.style.cursor = "pointer";
+            nBtn.disabled = false; nBtn.style.background = "#007aff"; nBtn.style.color = "#fff"; nBtn.style.cursor = "pointer";
         }
 
         async function requestEntry() {
@@ -255,7 +238,6 @@
             btn.innerText = "準備中..."; btn.disabled = true;
             const docEl = document.documentElement;
             if (docEl.requestFullscreen) docEl.requestFullscreen().catch(()=>{});
-            else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen().catch(()=>{});
             initCamera();
         }
 
@@ -263,22 +245,15 @@
             if (streamRef) return; 
             const video = document.getElementById('video');
             const btn = document.getElementById('next-btn');
-            
             const constraints = {
-                video: { 
-                    facingMode: "environment",
-                    width: { min: 1280, ideal: 3840, max: 4096 }, 
-                    height: { min: 720, ideal: 2160, max: 2160 }
-                },
+                video: { facingMode: "environment", width: { min: 1280, ideal: 3840, max: 4096 }, height: { min: 720, ideal: 2160, max: 2160 }},
                 audio: false
             };
-            
             try {
                 streamRef = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = streamRef;
                 config.target = parseFloat(document.getElementById('target-val').value);
                 config.stroke = document.querySelector('input[name="stroke"]:checked').value;
-
                 document.getElementById('setup-screen').style.display = 'none';
                 document.getElementById('camera-screen').style.display = 'block';
             } catch (err) {
@@ -288,22 +263,17 @@
                     document.getElementById('setup-screen').style.display = 'none';
                     document.getElementById('camera-screen').style.display = 'block';
                 } catch(err2) { alert("カメラの起動に失敗しました。"); }
-            } finally {
-                btn.innerText = "2. カメラを起動して撮影開始";
-                btn.disabled = false;
-            }
+            } finally { btn.innerText = "2. カメラを起動して撮影開始"; btn.disabled = false; }
         }
 
         function handleOrientation(event) {
             const beta = event.beta; const gamma = event.gamma; 
             const indicator = document.getElementById('status-indicator');
             const shutter = document.getElementById('shutter-btn');
-
             if (document.getElementById('camera-screen').style.display === 'block') {
                 const isHorizontalStable = Math.abs(beta) <= 3; 
                 const isVerticalPose = (Math.abs(gamma) >= 87 && Math.abs(gamma) <= 93) && isHorizontalStable;
                 const isFlatPose = (Math.abs(beta) <= 3) && (Math.abs(gamma) <= 3);
-
                 if (isVerticalPose || isFlatPose) {
                     isPoseOk = true; indicator.innerText = "【姿勢OK】そのまま撮影してください";
                     indicator.className = "perfect"; shutter.style.backgroundColor = "#4cd964";
@@ -324,7 +294,6 @@
             const sw = canvas.width / currentZoom; const sh = canvas.height / currentZoom;
             const sx = (canvas.width - sw) / 2; const sy = (canvas.height - sh) / 2;
             ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-
             document.getElementById('camera-screen').style.display = 'none';
             if(streamRef) { streamRef.getTracks().forEach(t => t.stop()); streamRef = null; }
             sendImageToGoogleDrive(canvas.toDataURL('image/jpeg'));
@@ -334,19 +303,12 @@
             document.getElementById('loading-overlay').style.display = 'flex';
             const payload = { authKey: AUTH_PASSWORD, target: config.target, stroke: config.stroke, image: base64Image };
             try {
-                await fetch(GAS_WEB_APP_URL, {
-                    method: 'POST', mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                await fetch(GAS_WEB_APP_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 document.getElementById('result-value').innerText = `TOTAL : ${config.target.toFixed(3)} mm`;
                 document.getElementById('result-judge').innerText = "JUDGE : OK (Drive Saved)";
                 document.getElementById('result-judge').className = "result-box status-ok";
             } catch (error) { alert("Googleドライブへの転送に失敗しました。"); }
-            finally {
-                document.getElementById('loading-overlay').style.display = 'none';
-                document.getElementById('result-screen').style.display = 'flex';
-            }
+            finally { document.getElementById('loading-overlay').style.display = 'none'; document.getElementById('result-screen').style.display = 'flex'; }
         }
 
         function resetToSetup() {
