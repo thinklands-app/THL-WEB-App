@@ -73,7 +73,6 @@
         #guide-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         .guide-box { position: absolute; box-sizing: border-box; border-width: 2px; border-style: solid; transition: all 0.2s ease-out; }
         
-        /* 🌟【大改造】青枠の縦幅（height）を24%から「12%」へスリム化、開始位置（top）を「44%」へ調整して上下の輪郭を完全遮断 */
         #box-blue { top: 44%; height: 12%; left: 30%; width: 35%; border-color: rgba(0, 0, 255, 0.8); }
         #center-line { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background-color: rgba(255, 0, 0, 0.8); }
         #box-purple { top: 42.2%; height: 15.6%; left: 36%; width: 17%; border-color: rgba(255, 0, 255, 0.8); }
@@ -194,20 +193,20 @@
 
         function updateRoiFrames() {
             const targetVal = parseFloat(document.getElementById('target-val').value) || 0;
-            
-            // ユーザー提案：1.0mm未満の場合は1.0mmのサイズでストップさせる
-            let clampedTarget = targetVal;
-            if (clampedTarget < 1.0) clampedTarget = 1.0;
-            
-            const shiftPercent = (5.0 - clampedTarget) * 2.5; 
+            const shiftPercent = (5.0 - targetVal) * 2.5; 
             
             const boxBlue = document.getElementById('box-blue');
             const boxPurple = document.getElementById('box-purple');
             
-            let blueLeft = 30 + shiftPercent; let blueWidth = 35 - shiftPercent;
+            // 🌟【改善：下限ガード】0mm付近でもガイド枠の幅が10%（約80px相当）未満に潰れないようフロント側もロック
+            let blueWidth = 35 - shiftPercent;
+            let blueLeft = 30 + shiftPercent;
+            if (blueWidth < 10) { blueWidth = 10; blueLeft = 49 - 10; }
             boxBlue.style.left = blueLeft + "%"; boxBlue.style.width = blueWidth + "%";
             
-            let purpleLeft = 36 + shiftPercent; let purpleWidth = 17 - shiftPercent;
+            let purpleWidth = 17 - shiftPercent;
+            let purpleLeft = 36 + shiftPercent;
+            if (purpleWidth < 5) { purpleWidth = 5; purpleLeft = 48 - 5; }
             boxPurple.style.left = purpleLeft + "%"; boxPurple.style.width = purpleWidth + "%";
         }
 
