@@ -62,24 +62,25 @@
         /* 2. カメラ画面 */
         #camera-screen { display: none; position: relative; width: 100vw; height: 100dvh; background: #000; overflow: hidden; }
         
-        /* 🌟【大改造】ビデオとガイド枠を同じ16:9コンテナに入れ、箱ごと中央基準で2倍にします */
+        /* 🌟【大修正①】コンテナは等倍（拡大しない）に戻し、位置ズレを防ぐ強固な16:9の土台にします */
         #camera-box { 
             position: absolute; top: 50%; left: 50%;
             width: 100vw; height: 56.25vw; 
             max-height: 100dvh; max-width: 177.78dvh; aspect-ratio: 16 / 9;
-            transform: translate(-50%, -50%) scale(2); /* ここで丸ごと2倍拡大 */
+            transform: translate(-50%, -50%); /* scale(2)を除去して等倍へ */
             overflow: hidden; z-index: 5;
         }
-        video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+        /* 🌟【大修正②】映像（ビデオ）だけをコンテナの内部で中央基準で2倍に拡大します */
+        video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; transform: scale(2); transform-origin: center center; }
         
         #guide-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         
-        /* 箱ごとscaleされるため、線の太さは1px（画面上ではクッキリ2px相当）にします */
-        .guide-box { position: absolute; box-sizing: border-box; border-width: 1px; border-style: solid; transition: all 0.2s ease-out; }
+        /* 🌟【大修正③】枠線が等倍に戻るため、線の太さを元のしっかりした「2px」に戻します */
+        .guide-box { position: absolute; box-sizing: border-box; border-width: 2px; border-style: solid; transition: all 0.2s ease-out; }
         
-        /* スリム青枠（上下12%仕様）と、読めていた初期の緑枠比率（52%〜64%）を100%完全再現 */
+        /* 比率％は、最初の完璧に読めていた黄金比（緑枠52%〜64%）を完全再現 */
         #box-blue { top: 44%; height: 12%; left: 30%; width: 35%; border-color: rgba(0, 0, 255, 0.8); }
-        #center-line { position: absolute; top: 50%; left: 0; width: 100%; height: 0.5px; background-color: rgba(255, 0, 0, 0.8); }
+        #center-line { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background-color: rgba(255, 0, 0, 0.8); }
         #box-purple { top: 42.2%; height: 15.6%; left: 36%; width: 17%; border-color: rgba(255, 0, 255, 0.8); }
         #box-green { top: 32.2%; height: 35.6%; left: 52%; width: 12%; border-color: rgba(0, 255, 0, 0.8); }
         #box-orange { top: 32.2%; height: 35.6%; left: 49%; width: 3%; border-color: rgba(255, 165, 0, 0.8); }
@@ -157,7 +158,7 @@
 
     <div id="loading-overlay">
         <div style="font-size: 40px; margin-bottom: 10px;">⏳</div>
-        <div>Googleドライブへ转送中...</div>
+        <div>Googleドライブへ転送中...</div>
     </div>
 
     <div id="result-screen" class="screen">
