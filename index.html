@@ -1,330 +1,332 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="mobile-web-app-capable" content="yes">
-    
-    <title>マイクロメータ自動判定 Pro</title>
-    <style>
-        body {
-            margin: 0; padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #000; color: #fff;
-            overflow: hidden; width: 100vw; height: 100dvh;
-        }
-        /* 1. 入力画面 */
-        .screen {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            height: 100dvh; padding: 20px; box-sizing: border-box; background-color: #111;
-        }
-        .input-group { margin-bottom: 20px; width: 100%; max-width: 300px; }
-        label { display: block; margin-bottom: 8px; font-size: 14px; color: #ccc; }
-        input[type="password"], input[type="number"] {
-            width: 100%; padding: 12px; border: 1px solid #444; border-radius: 8px;
-            background-color: #222; color: #fff; font-size: 16px; box-sizing: border-box;
-        }
-        .radio-group { display: flex; gap: 10px; }
-        .radio-btn { flex: 1; text-align: center; }
-        .radio-btn input { display: none; }
-        .radio-btn span {
-            display: block; padding: 12px; background: #222;
-            border: 1px solid #444; border-radius: 8px; cursor: pointer; font-size: 16px;
-        }
-        .radio-btn input:checked + span { background: #007aff; border-color: #007aff; }
-        
-        #sensor-btn {
-            width: 100%; max-width: 300px; padding: 14px; background: #ff9500;
-            border: none; border-radius: 8px; color: #fff; font-size: 16px;
-            font-weight: bold; cursor: pointer; margin-bottom: 15px; transition: 0.3s;
-        }
-        #sensor-btn.ok { background: #4cd964; pointer-events: none; }
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+ 
+<meta name="apple-mobile-web-app-capable" content="yes">
+ <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+ <meta name="mobile-web-app-capable" content="yes">
+ 
+<title>マイクロメータ自動判定 Pro</title>
+ <style>
+ body {
+ margin: 0; padding: 0;
+ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+ background-color: #000; color: #fff;
+ overflow: hidden; width: 100vw; height: 100dvh;
+ }
+ /* 1. 入力画面 */
+ .screen {
+ display: flex; flex-direction: column; align-items: center; justify-content: center;
+ height: 100dvh; padding: 20px; box-sizing: border-box; background-color: #111;
+ }
+ .input-group { margin-bottom: 20px; width: 100%; max-width: 300px; }
+ label { display: block; margin-bottom: 8px; font-size: 14px; color: #ccc; }
+ input[type="password"], input[type="number"] {
+ width: 100%; padding: 12px; border: 1px solid #444; border-radius: 8px;
+ background-color: #222; color: #fff; font-size: 16px; box-sizing: border-box;
+ }
+ .radio-group { display: flex; gap: 10px; }
+ .radio-btn { flex: 1; text-align: center; }
+ .radio-btn input { display: none; }
+ .radio-btn span {
+ display: block; padding: 12px; background: #222;
+ border: 1px solid #444; border-radius: 8px; cursor: pointer; font-size: 16px;
+ }
+ .radio-btn input:checked + span { background: #007aff; border-color: #007aff; }
+ 
+#sensor-btn {
+ width: 100%; max-width: 300px; padding: 14px; background: #ff9500;
+ border: none; border-radius: 8px; color: #fff; font-size: 16px;
+ font-weight: bold; cursor: pointer; margin-bottom: 15px; transition: 0.3s;
+ }
+ #sensor-btn.ok { background: #4cd964; pointer-events: none; }
 
-        #next-btn {
-            width: 100%; max-width: 300px; padding: 16px; background: #444;
-            border: none; border-radius: 8px; color: #888; font-size: 18px;
-            font-weight: bold; cursor: not-allowed; transition: all 0.3s;
-        }
+ #next-btn {
+ width: 100%; max-width: 300px; padding: 16px; background: #444;
+ border: none; border-radius: 8px; color: #888; font-size: 18px;
+ font-weight: bold; cursor: not-allowed; transition: all 0.3s;
+ }
 
-        /* 縦持ち警告 */
-        #portrait-warning {
-            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #000; z-index: 9999; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center; pointer-events: none;
-        }
-        @media (orientation: portrait) {
-            #camera-screen[style*="display: block"] ~ #portrait-warning { display: flex; }
-        }
+ /* 縦持ち警告 */
+ #portrait-warning {
+ display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+ background: #000; z-index: 9999; flex-direction: column;
+ align-items: center; justify-content: center; text-align: center; pointer-events: none;
+ }
+ @media (orientation: portrait) {
+ #camera-screen[style*="display: block"] ~ #portrait-warning { display: flex; }
+ }
 
-        /* 2. カメラ画面 */
-        #camera-screen { display: none; position: relative; width: 100vw; height: 100dvh; background: #000; overflow: hidden; }
-        
-        /* 🌟【大修正①】コンテナは等倍（拡大しない）に戻し、位置ズレを防ぐ強固な16:9の土台にします */
-        #camera-box { 
-            position: absolute; top: 50%; left: 50%;
-            width: 100vw; height: 56.25vw; 
-            max-height: 100dvh; max-width: 177.78dvh; aspect-ratio: 16 / 9;
-            transform: translate(-50%, -50%); /* scale(2)を除去して等倍へ */
-            overflow: hidden; z-index: 5;
-        }
-        /* 🌟【大修正②】映像（ビデオ）だけをコンテナの内部で中央基準で2倍に拡大します */
-        video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; transform: scale(2); transform-origin: center center; }
-        
-        #guide-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        
-        /* 🌟【大修正③】枠線が等倍に戻るため、線の太さを元のしっかりした「2px」に戻します */
-        .guide-box { position: absolute; box-sizing: border-box; border-width: 2px; border-style: solid; transition: all 0.2s ease-out; }
-        
-        /* 比率％は、最初の完璧に読めていた黄金比（緑枠52%〜64%）を完全再現 */
-        #box-blue { top: 44%; height: 12%; left: 30%; width: 35%; border-color: rgba(0, 0, 255, 0.8); }
-        #center-line { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background-color: rgba(255, 0, 0, 0.8); }
-        #box-purple { top: 42.2%; height: 15.6%; left: 36%; width: 17%; border-color: rgba(255, 0, 255, 0.8); }
-        #box-green { top: 32.2%; height: 35.6%; left: 52%; width: 12%; border-color: rgba(0, 255, 0, 0.8); }
-        #box-orange { top: 32.2%; height: 35.6%; left: 49%; width: 3%; border-color: rgba(255, 165, 0, 0.8); }
+ /* 2. カメラ画面 */
+ #camera-screen { display: none; position: relative; width: 100vw; height: 100dvh; background: #000; overflow: hidden; }
+ 
+#camera-box { 
+position: absolute; top: 50%; left: 50%;
+ width: 100vw; height: 56.25vw; 
+max-height: 100dvh; max-width: 177.78dvh; aspect-ratio: 16 / 9;
+ transform: translate(-50%, -50%);
+ overflow: hidden; z-index: 5;
+ }
+ /* 🌟【変更】カメラのデジタルズーム倍率に合わせてプレビュー映像を3倍に拡大 */
+ video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; transform: scale(3); transform-origin: center center; }
+ 
+#guide-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+ 
+.guide-box { position: absolute; box-sizing: border-box; border-width: 2px; border-style: solid; transition: all 0.2s ease-out; }
+ 
+/* 🌟【変更】3倍ズームの画角拡張（1.5倍化）および境界線の3px（0.4%）右シフトをCSSへ適用 */
+ #box-blue { top: 41%; height: 18%; left: 20%; width: 52.5%; border-color: rgba(0, 0, 255, 0.8); }
+ #center-line { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background-color: rgba(255, 0, 0, 0.8); }
+ #box-purple { top: 38.3%; height: 23.4%; left: 29%; width: 25.5%; border-color: rgba(255, 0, 255, 0.8); }
+ #box-orange { top: 23.3%; height: 53.4%; left: 48.5%; width: 4.9%; border-color: rgba(255, 165, 0, 0.8); }
+ #box-green { top: 23.3%; height: 53.4%; left: 53.4%; width: 17.6%; border-color: rgba(0, 255, 0, 0.8); }
 
-        /* UIオーバーレイ */
-        #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
-        #status-indicator {
-            position: absolute; top: env(safe-area-inset-top, 20px); left: 50%; transform: translateX(-50%);
-            padding: 10px 20px; border-radius: 30px; background: rgba(0, 0, 0, 0.8);
-            font-size: 14px; font-weight: bold; border: 2px solid #ff3b30; white-space: nowrap;
-        }
-        #status-indicator.perfect { border-color: #4cd964; color: #4cd964; box-shadow: 0 0 10px rgba(76, 217, 100, 0.5); }
-        #shutter-btn {
-            position: absolute; top: 50%; right: 30px; transform: translateY(-50%);
-            width: 70px; height: 70px; border-radius: 50%; background: #fff; border: 6px solid rgba(255,255,255,0.3); pointer-events: auto;
-        }
+ /* UIオーバーレイ */
+ #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
+ #status-indicator {
+ position: absolute; top: env(safe-area-inset-top, 20px); left: 50%; transform: translateX(-50%);
+ padding: 10px 20px; border-radius: 30px; background: rgba(0, 0, 0, 0.8);
+ font-size: 14px; font-weight: bold; border: 2px solid #ff3b30; white-space: nowrap;
+ }
+ #status-indicator.perfect { border-color: #4cd964; color: #4cd964; box-shadow: 0 0 10px rgba(76, 217, 100, 0.5); }
+ #shutter-btn {
+ position: absolute; top: 50%; right: 30px; transform: translateY(-50%);
+ width: 70px; height: 70px; border-radius: 50%; background: #fff; border: 6px solid rgba(255,255,255,0.3); pointer-events: auto;
+ }
 
-        /* 3. 結果画面 */
-        #result-screen { display: none; background: #000; }
-        #result-canvas { width: 100%; max-width: 500px; border-radius: 8px; margin-bottom: 15px; }
-        .result-box { font-size: 24px; font-weight: bold; margin-bottom: 8px; }
-        .status-ok { color: #4cd964; }
-        .status-ng { color: #ff3b30; }
-        #loading-overlay {
-            display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(0,0,0,0.8); z-index: 10000; flex-direction: column; align-items: center; justify-content: center;
-        }
-    </style>
+ /* 3. 結果画面 */
+ #result-screen { display: none; background: #000; }
+ #result-canvas { width: 100%; max-width: 500px; border-radius: 8px; margin-bottom: 15px; }
+ .result-box { font-size: 24px; font-weight: bold; margin-bottom: 8px; }
+ .status-ok { color: #4cd964; }
+ .status-ng { color: #ff3b30; }
+ #loading-overlay {
+ display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(0,0,0,0.8); z-index: 10000; flex-direction: column; align-items: center; justify-content: center;
+ }
+ </style>
 </head>
 <body>
 
-    <div id="password-screen" class="screen">
-        <h2 style="margin-bottom: 30px;">社内認証</h2>
-        <div class="input-group">
-            <label>共通パスワード</label>
-            <input type="password" id="app-pass" placeholder="••••••••">
-        </div>
-        <button onclick="checkPassword()">ログイン</button>
-    </div>
+ <div id="password-screen" class="screen">
+ <h2 style="margin-bottom: 30px;">社内認証</h2>
+ <div class="input-group">
+ <label>共通パスワード</label>
+ <input type="password" id="app-pass" placeholder="••••••••">
+ </div>
+ <button onclick="checkPassword()">ログイン</button>
+ </div>
 
-    <div id="setup-screen" class="screen" style="display: none;">
-        <h2 style="margin-bottom: 30px;">測定条件入力</h2>
-        <div class="input-group">
-            <label>目標目盛 (mm)</label>
-            <input type="number" id="target-val" value="5.000" step="0.001" oninput="limitDecimalPlaces(this, 3); updateRoiFrames();">
-        </div>
-        <div class="input-group">
-            <label>最大ストローク長</label>
-            <div class="radio-group">
-                <label class="radio-btn"><input type="radio" name="stroke" value="6.5" checked><span>6.5 mm</span></label>
-                <label class="radio-btn"><input type="radio" name="stroke" value="13"><span>13 mm</span></label>
-            </div>
-        </div>
-        <button id="sensor-btn" onclick="enableSensor()">1. 傾きセンサーを有効にする</button>
-        <button id="next-btn" onclick="requestEntry()" disabled>2. カメラを起動して撮影開始</button>
-    </div>
+ <div id="setup-screen" class="screen" style="display: none;">
+ <h2 style="margin-bottom: 30px;">測定条件入力</h2>
+ <div class="input-group">
+ <label>目標目盛 (mm)</label>
+ <input type="number" id="target-val" value="5.000" step="0.001" oninput="limitDecimalPlaces(this, 3); updateRoiFrames();">
+ </div>
+ <div class="input-group">
+ <label>最大ストローク長</label>
+ <div class="radio-group">
+ <label class="radio-btn"><input type="radio" name="stroke" value="6.5" checked><span>6.5 mm</span></label>
+ <label class="radio-btn"><input type="radio" name="stroke" value="13"><span>13 mm</span></label>
+ </div>
+ </div>
+ <button id="sensor-btn" onclick="enableSensor()">1. 傾きセンサーを有効にする</button>
+ <button id="next-btn" onclick="requestEntry()" disabled>2. カメラを起動して撮影開始</button>
+ </div>
 
-    <div id="camera-screen">
-        <div id="camera-box">
-            <video id="video" autoplay playsinline></video>
-            <div id="guide-overlay">
-                <div id="box-blue" class="guide-box"></div>
-                <div id="center-line"></div>
-                <div id="box-purple" class="guide-box"></div>
-                <div id="box-orange" class="guide-box"></div>
-                <div id="box-green" class="guide-box"></div>
-            </div>
-        </div>
-        <div id="ui-overlay">
-            <div id="status-indicator">長辺を水平にして、中心線に合わせてください</div>
-            <div id="shutter-btn" onclick="takePicture()"></div>
-        </div>
-    </div>
+ <div id="camera-screen">
+ <div id="camera-box">
+ <video id="video" autoplay playsinline></video>
+ <div id="guide-overlay">
+ <div id="box-blue" class="guide-box"></div>
+ <div id="center-line"></div>
+ <div id="box-purple" class="guide-box"></div>
+ <div id="box-orange" class="guide-box"></div>
+ <div id="box-green" class="guide-box"></div>
+ </div>
+ </div>
+ <div id="ui-overlay">
+ <div id="status-indicator">長辺を水平にして、中心線に合わせてください</div>
+ <div id="shutter-btn" onclick="takePicture()"></div>
+ </div>
+ </div>
 
-    <div id="portrait-warning"><h3>🔄 スマートフォンを横向きにしてください</h3></div>
+ <div id="portrait-warning"><h3>🔄 スマートフォンを横向きにしてください</h3></div>
 
-    <div id="loading-overlay">
-        <div style="font-size: 40px; margin-bottom: 10px;">⏳</div>
-        <div>Googleドライブへ転送中...</div>
-    </div>
+ <div id="loading-overlay">
+ <div style="font-size: 40px; margin-bottom: 10px;">⏳</div>
+ <div>Googleドライブへ転送中...</div>
+ </div>
 
-    <div id="result-screen" class="screen">
-        <h2>測定結果</h2>
-        <canvas id="result-canvas"></canvas>
-        <div id="result-value" class="result-box">TOTAL: -- mm</div>
-        <div id="result-judge" class="result-box">--</div>
-        <button onclick="resetToSetup()" style="margin-top: 20px; background: #007aff; padding: 14px 40px; border: none; border-radius: 8px; color: #fff; font-size: 16px; font-weight: bold;">再測定 (設定に戻る)</button>
-    </div>
+ <div id="result-screen" class="screen">
+ <h2>測定結果</h2>
+ <canvas id="result-canvas"></canvas>
+ <div id="result-value" class="result-box">TOTAL: -- mm</div>
+ <div id="result-judge" class="result-box">--</div>
+ <button onclick="resetToSetup()" style="margin-top: 20px; background: #007aff; padding: 14px 40px; border: none; border-radius: 8px; color: #fff; font-size: 16px; font-weight: bold;">再測定 (設定に戻る)</button>
+ </div>
 
-    <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzBy5afDWgMpIwN0fZhj81C-pztMc5FbA12ziHsM1aaCXYkCyqqw3xX17LvwYKIaCZi/exec"; 
-        const AUTH_PASSWORD = "micro2026"; 
+ <script>
+ const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzBy5afDWgMpIwN0fZhj81C-pztMc5FbA12ziHsM1aaCXYkCyqqw3xX17LvwYKIaCZi/exec"; 
+const AUTH_PASSWORD = "micro2026"; 
 
-        let config = { target: 5.00, stroke: 6.5 };
-        let isPoseOk = false;
-        let streamRef = null;
-        let currentZoom = 2; 
-        let isSensorInitialized = false;
+let config = { target: 5.00, stroke: 6.5 };
+ let isPoseOk = false;
+ let streamRef = null;
+ /* 🌟【変更】内部キャプチャのデジタルズーム倍率を 3倍 に引き上げ */
+ let currentZoom = 3; 
+let isSensorInitialized = false;
 
-        function checkPassword() {
-            if (document.getElementById('app-pass').value === AUTH_PASSWORD) {
-                document.getElementById('password-screen').style.display = 'none';
-                document.getElementById('setup-screen').style.display = 'flex';
-                updateRoiFrames(); 
-            } else { alert("パスワードが違います。"); }
-        }
+ function checkPassword() {
+ if (document.getElementById('app-pass').value === AUTH_PASSWORD) {
+ document.getElementById('password-screen').style.display = 'none';
+ document.getElementById('setup-screen').style.display = 'flex';
+ updateRoiFrames(); 
+} else { alert("パスワードが違います。"); }
+ }
 
-        function limitDecimalPlaces(element, maxPlaces) {
-            let value = element.value;
-            if (value.includes('.')) {
-                let parts = value.split('.');
-                if (parts[1].length > maxPlaces) {
-                    element.value = parts[0] + '.' + parts[1].substring(0, maxPlaces);
-                }
-            }
-        }
+ function limitDecimalPlaces(element, maxPlaces) {
+ let value = element.value;
+ if (value.includes('.')) {
+ let parts = value.split('.');
+ if (parts[1].length > maxPlaces) {
+ element.value = parts[0] + '.' + parts[1].substring(0, maxPlaces);
+ }
+ }
+ }
 
-        function updateRoiFrames() {
-            const targetVal = parseFloat(document.getElementById('target-val').value) || 0;
-            
-            // 1.0mm下限限界ストッパー
-            let clampedTarget = targetVal;
-            if (clampedTarget < 1.0) clampedTarget = 1.0;
-            
-            const shiftPercent = (5.0 - clampedTarget) * 2.5; 
-            
-            const boxBlue = document.getElementById('box-blue');
-            const boxPurple = document.getElementById('box-purple');
-            
-            let blueWidth = 35 - shiftPercent;
-            let blueLeft = 30 + shiftPercent;
-            if (blueWidth < 10) { blueWidth = 10; blueLeft = 49 - 10; }
-            boxBlue.style.left = blueLeft + "%"; boxBlue.style.width = blueWidth + "%";
-            
-            let purpleWidth = 17 - shiftPercent;
-            let purpleLeft = 36 + shiftPercent;
-            if (purpleWidth < 5) { purpleWidth = 5; purpleLeft = 48 - 5; }
-            boxPurple.style.left = purpleLeft + "%"; boxPurple.style.width = purpleWidth + "%";
-        }
+ /* 🌟【変更】3倍ズームのスケール（1.5倍）および3px（0.4%）右シフトに合わせて動的変形ロジックを修正 */
+ function updateRoiFrames() {
+ const targetVal = parseFloat(document.getElementById('target-val').value) || 0;
+ 
+// 1.0mm下限限界ストッパー
+ let clampedTarget = targetVal;
+ if (clampedTarget < 1.0) clampedTarget = 1.0;
+ 
+// シフト量もズーム倍率に合わせて1.5倍（2.5 * 1.5 = 3.75）にスケールアップ
+ const shiftPercent = (5.0 - clampedTarget) * 3.75; 
 
-        async function enableSensor() {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                try {
-                    const state = await DeviceOrientationEvent.requestPermission();
-                    if (state === 'granted') {
-                        window.addEventListener('deviceorientation', handleOrientation);
-                        isSensorInitialized = true; activateNextButton();
-                    } else { alert("センサーの許可が拒否されました。"); }
-                } catch (e) { alert("センサー申請エラー。"); }
-            } else {
-                window.addEventListener('deviceorientation', handleOrientation);
-                isSensorInitialized = true; activateNextButton();
-            }
-        }
+const boxBlue = document.getElementById('box-blue');
+ const boxPurple = document.getElementById('box-purple');
+ 
+// 3倍ズーム用に広げた初期値をベースに計算
+ let blueWidth = 52.5 - shiftPercent;
+ let blueLeft = 20 + shiftPercent;
+ if (blueWidth < 15) { blueWidth = 15; blueLeft = 53.4 - 15; }
+ boxBlue.style.left = blueLeft + "%"; boxBlue.style.width = blueWidth + "%";
+ 
+let purpleWidth = 25.5 - shiftPercent;
+ let purpleLeft = 29 + shiftPercent;
+ if (purpleWidth < 7.5) { purpleWidth = 7.5; purpleLeft = 53.4 - 7.5; }
+ boxPurple.style.left = purpleLeft + "%"; boxPurple.style.width = purpleWidth + "%";
+ }
 
-        function activateNextButton() {
-            const sBtn = document.getElementById('sensor-btn');
-            sBtn.innerText = "✓ 傾きセンサー有効"; sBtn.className = "ok";
-            const nBtn = document.getElementById('next-btn');
-            nBtn.disabled = false; nBtn.style.background = "#007aff"; nBtn.style.color = "#fff"; nBtn.style.cursor = "pointer";
-        }
+ async function enableSensor() {
+ if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+ try {
+ const state = await DeviceOrientationEvent.requestPermission();
+ if (state === 'granted') {
+ window.addEventListener('deviceorientation', handleOrientation);
+ isSensorInitialized = true; activateNextButton();
+ } else { alert("センサーの許可が拒否されました。"); }
+ } catch (e) { alert("センサー申請エラー。"); }
+ } else {
+ window.addEventListener('deviceorientation', handleOrientation);
+ isSensorInitialized = true; activateNextButton();
+ }
+ }
 
-        async function requestEntry() {
-            const btn = document.getElementById('next-btn');
-            btn.innerText = "準備中..."; btn.disabled = true;
-            const docEl = document.documentElement;
-            if (docEl.requestFullscreen) docEl.requestFullscreen().catch(()=>{});
-            initCamera();
-        }
+ function activateNextButton() {
+ const sBtn = document.getElementById('sensor-btn');
+ sBtn.innerText = "✓ 傾きセンサー有効"; sBtn.className = "ok";
+ const nBtn = document.getElementById('next-btn');
+ nBtn.disabled = false; nBtn.style.background = "#007aff"; nBtn.style.color = "#fff"; nBtn.style.cursor = "pointer";
+ }
 
-        async function initCamera() {
-            if (streamRef) return; 
-            const video = document.getElementById('video');
-            const btn = document.getElementById('next-btn');
-            const constraints = {
-                video: { facingMode: "environment", width: { min: 1280, ideal: 3840, max: 4096 }, height: { min: 720, ideal: 2160, max: 2160 }},
-                audio: false
-            };
-            try {
-                streamRef = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = streamRef;
-                config.target = parseFloat(document.getElementById('target-val').value);
-                config.stroke = document.querySelector('input[name="stroke"]:checked').value;
-                document.getElementById('setup-screen').style.display = 'none';
-                document.getElementById('camera-screen').style.display = 'block';
-            } catch (err) {
-                try {
-                    streamRef = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-                    video.srcObject = streamRef;
-                    document.getElementById('setup-screen').style.display = 'none';
-                    document.getElementById('camera-screen').style.display = 'block';
-                } catch(err2) { alert("カメラの起動に失敗しました。"); }
-            } finally { btn.innerText = "2. カメラを起動して撮影開始"; btn.disabled = false; }
-        }
+ async function requestEntry() {
+ const btn = document.getElementById('next-btn');
+ btn.innerText = "準備中..."; btn.disabled = true;
+ const docEl = document.documentElement;
+ if (docEl.requestFullscreen) docEl.requestFullscreen().catch(()=>{});
+ initCamera();
+ }
 
-        function handleOrientation(event) {
-            const beta = event.beta; const gamma = event.gamma; 
-            const indicator = document.getElementById('status-indicator');
-            const shutter = document.getElementById('shutter-btn');
-            if (document.getElementById('camera-screen').style.display === 'block') {
-                const isHorizontalStable = Math.abs(beta) <= 3; 
-                const isVerticalPose = (Math.abs(gamma) >= 87 && Math.abs(gamma) <= 93) && isHorizontalStable;
-                const isFlatPose = (Math.abs(beta) <= 3) && (Math.abs(gamma) <= 3);
-                if (isVerticalPose || isFlatPose) {
-                    isPoseOk = true; indicator.innerText = "【姿勢OK】そのまま撮影してください";
-                    indicator.className = "perfect"; shutter.style.backgroundColor = "#4cd964";
-                } else {
-                    isPoseOk = false; indicator.innerText = "長辺を水平にして、中心線に合わせてください";
-                    indicator.className = ""; shutter.style.backgroundColor = "#fff";
-                }
-            }
-        }
+ async function initCamera() {
+ if (streamRef) return; 
+const video = document.getElementById('video');
+ const btn = document.getElementById('next-btn');
+ const constraints = {
+ video: { facingMode: "environment", width: { min: 1280, ideal: 3840, max: 4096 }, height: { min: 720, ideal: 2160, max: 2160 }},
+ audio: false
+ };
+ try {
+ streamRef = await navigator.mediaDevices.getUserMedia(constraints);
+ video.srcObject = streamRef;
+ config.target = parseFloat(document.getElementById('target-val').value);
+ config.stroke = document.querySelector('input[name="stroke"]:checked').value;
+ document.getElementById('setup-screen').style.display = 'none';
+ document.getElementById('camera-screen').style.display = 'block';
+ } catch (err) {
+ try {
+ streamRef = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+ video.srcObject = streamRef;
+ document.getElementById('setup-screen').style.display = 'none';
+ document.getElementById('camera-screen').style.display = 'block';
+ } catch(err2) { alert("カメラの起動に失敗しました。"); }
+ } finally { btn.innerText = "2. カメラを起動して撮影開始"; btn.disabled = false; }
+ }
 
-        function takePicture() {
-            if (!isPoseOk) { if(!confirm("姿勢が傾いています。撮影しますか？")) return; }
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('result-canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            
-            const sw = canvas.width / currentZoom; const sh = canvas.height / currentZoom;
-            const sx = (canvas.width - sw) / 2; const sy = (canvas.height - sh) / 2;
-            ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-            document.getElementById('camera-screen').style.display = 'none';
-            if(streamRef) { streamRef.getTracks().forEach(t => t.stop()); streamRef = null; }
-            sendImageToGoogleDrive(canvas.toDataURL('image/jpeg'));
-        }
+ function handleOrientation(event) {
+ const beta = event.beta; const gamma = event.gamma; 
+const indicator = document.getElementById('status-indicator');
+ const shutter = document.getElementById('shutter-btn');
+ if (document.getElementById('camera-screen').style.display === 'block') {
+ const isHorizontalStable = Math.abs(beta) <= 3; 
+const isVerticalPose = (Math.abs(gamma) >= 87 && Math.abs(gamma) <= 93) && isHorizontalStable;
+ const isFlatPose = (Math.abs(beta) <= 3) && (Math.abs(gamma) <= 3);
+ if (isVerticalPose || isFlatPose) {
+ isPoseOk = true; indicator.innerText = "【姿勢OK】そのまま撮影してください";
+ indicator.className = "perfect"; shutter.style.backgroundColor = "#4cd964";
+ } else {
+ isPoseOk = false; indicator.innerText = "長辺を水平にして、中心線に合わせてください";
+ indicator.className = ""; shutter.style.backgroundColor = "#fff";
+ }
+ }
+ }
 
-        async function sendImageToGoogleDrive(base64Image) {
-            document.getElementById('loading-overlay').style.display = 'flex';
-            const payload = { authKey: AUTH_PASSWORD, target: config.target, stroke: config.stroke, image: base64Image };
-            try {
-                await fetch(GAS_WEB_APP_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                document.getElementById('result-value').innerText = `TOTAL : ${config.target.toFixed(3)} mm`;
-                document.getElementById('result-judge').innerText = "JUDGE : OK (Drive Saved)";
-                document.getElementById('result-judge').className = "result-box status-ok";
-            } catch (error) { alert("Googleドライブへの転送に失敗しました。"); }
-            finally { document.getElementById('loading-overlay').style.display = 'none'; document.getElementById('result-screen').style.display = 'flex'; }
-        }
+ function takePicture() {
+ if (!isPoseOk) { if(!confirm("姿勢が傾いています。撮影しますか？")) return; }
+ const video = document.getElementById('video');
+ const canvas = document.getElementById('result-canvas');
+ const ctx = canvas.getContext('2d');
+ canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+ 
+const sw = canvas.width / currentZoom; const sh = canvas.height / currentZoom;
+ const sx = (canvas.width - sw) / 2; const sy = (canvas.height - sh) / 2;
+ ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+ document.getElementById('camera-screen').style.display = 'none';
+ if(streamRef) { streamRef.getTracks().forEach(t => t.stop()); streamRef = null; }
+ sendImageToGoogleDrive(canvas.toDataURL('image/jpeg'));
+ }
 
-        function resetToSetup() {
-            document.getElementById('result-screen').style.display = 'none';
-            document.getElementById('setup-screen').style.display = 'flex';
-            updateRoiFrames();
-        }
-    </script>
+ async function sendImageToGoogleDrive(base64Image) {
+ document.getElementById('loading-overlay').style.display = 'flex';
+ const payload = { authKey: AUTH_PASSWORD, target: config.target, stroke: config.stroke, image: base64Image };
+ try {
+ await fetch(GAS_WEB_APP_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+ document.getElementById('result-value').innerText = `TOTAL : ${config.target.toFixed(3)} mm`;
+ document.getElementById('result-judge').innerText = "JUDGE : OK (Drive Saved)";
+ document.getElementById('result-judge').className = "result-box status-ok";
+ } catch (error) { alert("Googleドライブへの転送に失敗しました。"); }
+ finally { document.getElementById('loading-overlay').style.display = 'none'; document.getElementById('result-screen').style.display = 'flex'; }
+ }
+
+ function resetToSetup() {
+ document.getElementById('result-screen').style.display = 'none';
+ document.getElementById('setup-screen').style.display = 'flex';
+ updateRoiFrames();
+ }
+ </script>
 </body>
 </html>
