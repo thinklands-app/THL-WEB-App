@@ -263,7 +263,7 @@ const video = document.getElementById('video');
  // 端末が手動露出補正に対応している場合、テカリを抑えるため少し暗め(-1.0)にする
  if (capabilities.exposureCompensation) {
  await track.applyConstraints({
- advanced: [{ exposureCompensation: -1.0 }] 
+ advanced: [{ exposureCompensation: 0 }] 
  });
  print("[システム] カメラの露出を -1.0 に設定しました。");
  }
