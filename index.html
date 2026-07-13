@@ -69,14 +69,12 @@ max-height: 100dvh; max-width: 177.78dvh; aspect-ratio: 16 / 9;
  transform: translate(-50%, -50%);
  overflow: hidden; z-index: 5;
  }
- /* 🌟【変更】カメラのデジタルズーム倍率に合わせてプレビュー映像を3倍に拡大 */
  video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; transform: scale(3); transform-origin: center center; }
  
 #guide-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
  
 .guide-box { position: absolute; box-sizing: border-box; border-width: 2px; border-style: solid; transition: all 0.2s ease-out; }
  
-/* 🌟【変更】3倍ズームの画角拡張（1.5倍化）および境界線の3px（0.4%）右シフトをCSSへ適用 */
  #box-blue { top: 41%; height: 18%; left: 20%; width: 52.5%; border-color: rgba(0, 0, 255, 0.8); }
  #center-line { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background-color: rgba(255, 0, 0, 0.8); }
  #box-purple { top: 38.3%; height: 23.4%; left: 29%; width: 25.5%; border-color: rgba(255, 0, 255, 0.8); }
@@ -174,7 +172,6 @@ const AUTH_PASSWORD = "micro2026";
 let config = { target: 5.00, stroke: 6.5 };
  let isPoseOk = false;
  let streamRef = null;
- /* 🌟【変更】内部キャプチャのデジタルズーム倍率を 3倍 に引き上げ */
  let currentZoom = 3; 
 let isSensorInitialized = false;
 
@@ -196,22 +193,17 @@ let isSensorInitialized = false;
  }
  }
 
- /* 🌟【変更】3倍ズームのスケール（1.5倍）および3px（0.4%）右シフトに合わせて動的変形ロジックを修正 */
  function updateRoiFrames() {
  const targetVal = parseFloat(document.getElementById('target-val').value) || 0;
- 
-// 1.0mm下限限界ストッパー
  let clampedTarget = targetVal;
  if (clampedTarget < 1.0) clampedTarget = 1.0;
  
-// シフト量もズーム倍率に合わせて1.5倍（2.5 * 1.5 = 3.75）にスケールアップ
- const shiftPercent = (5.0 - clampedTarget) * 3.75; 
+const shiftPercent = (5.0 - clampedTarget) * 3.75; 
 
 const boxBlue = document.getElementById('box-blue');
  const boxPurple = document.getElementById('box-purple');
  
-// 3倍ズーム用に広げた初期値をベースに計算
- let blueWidth = 52.5 - shiftPercent;
+let blueWidth = 52.5 - shiftPercent;
  let blueLeft = 20 + shiftPercent;
  if (blueWidth < 15) { blueWidth = 15; blueLeft = 53.4 - 15; }
  boxBlue.style.left = blueLeft + "%"; boxBlue.style.width = blueWidth + "%";
@@ -263,6 +255,20 @@ const video = document.getElementById('video');
  try {
  streamRef = await navigator.mediaDevices.getUserMedia(constraints);
  video.srcObject = streamRef;
+ 
+// 🌟【追加修正】露出（明るさ）の調整ロジックをここに挿入
+ try {
+ const track = streamRef.getVideoTracks()[0];
+ const capabilities = track.getCapabilities();
+ // 端末が手動露出補正に対応している場合、テカリを抑えるため少し暗め(-1.0)にする
+ if (capabilities.exposureCompensation) {
+ await track.applyConstraints({
+ advanced: [{ exposureCompensation: -1.0 }] 
+ });
+ print("[システム] カメラの露出を -1.0 に設定しました。");
+ }
+ } catch (e) { console.log("露出補正非対応の端末です:", e); }
+
  config.target = parseFloat(document.getElementById('target-val').value);
  config.stroke = document.querySelector('input[name="stroke"]:checked').value;
  document.getElementById('setup-screen').style.display = 'none';
