@@ -94,6 +94,16 @@ max-height: 100dvh; max-width: 177.78dvh; aspect-ratio: 16 / 9;
  width: 70px; height: 70px; border-radius: 50%; background: #fff; border: 6px solid rgba(255,255,255,0.3); pointer-events: auto;
  }
 
+ /* 🌟【追加】リアルタイム露出調整スライダーのコンテナUI（下部中央に配置） */
+ #exposure-container {
+ position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 25px); left: 50%; transform: translateX(-50%);
+ pointer-events: auto; background: rgba(0, 0, 0, 0.65); padding: 10px 20px; border-radius: 12px;
+ display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 30;
+ border: 1px solid #333;
+ }
+ #exposure-container label { font-size: 13px; color: #fff; font-weight: bold; margin: 0; }
+ #exposure-slider { width: 180px; margin: 0; cursor: pointer; }
+
  /* 3. 結果画面 */
  #result-screen { display: none; background: #000; }
  #result-canvas { width: 100%; max-width: 500px; border-radius: 8px; margin-bottom: 15px; }
@@ -147,6 +157,12 @@ max-height: 100dvh; max-width: 177.78dvh; aspect-ratio: 16 / 9;
  <div id="ui-overlay">
  <div id="status-indicator">長辺を水平にして、中心線に合わせてください</div>
  <div id="shutter-btn" onclick="takePicture()"></div>
+ 
+<!-- 🌟【追加】露出調整用UIの組み込み -->
+ <div id="exposure-container">
+ <label>露出補正: <span id="exposure-val">0.00</span></label>
+ <input type="range" id="exposure-slider" min="-1.5" max="1.5" step="0.25" value="0" oninput="changeExposure(this.value)">
+ </div>
  </div>
  </div>
 
@@ -180,7 +196,12 @@ let isSensorInitialized = false;
  document.getElementById('password-screen').style.display = 'none';
  document.getElementById('setup-screen').style.display = 'flex';
  updateRoiFrames(); 
-} else { alert("パスワードが違います。"); }
+ 
+// 🌟【追加】前回の設定値を記憶から読み出す初期化処理
+ const savedEV = localStorage.getItem('micro_exposure') || "0.00";
+ document.getElementById('exposure-slider').value = parseFloat(savedEV);
+ document.getElementById('exposure-val').innerText = parseFloat(savedEV).toFixed(2);
+ } else { alert("パスワードが違います。"); }
  }
 
  function limitDecimalPlaces(element, maxPlaces) {
@@ -256,16 +277,15 @@ const video = document.getElementById('video');
  streamRef = await navigator.mediaDevices.getUserMedia(constraints);
  video.srcObject = streamRef;
  
-// 🌟【追加修正】露出（明るさ）の調整ロジックをここに挿入
+// 🌟【追加修正】記憶された露出値をハードウェアカメラへ初期適用
  try {
  const track = streamRef.getVideoTracks()[0];
  const capabilities = track.getCapabilities();
- // 端末が手動露出補正に対応している場合、テカリを抑えるため少し暗め(-1.0)にする
  if (capabilities.exposureCompensation) {
+ const initialEV = parseFloat(localStorage.getItem('micro_exposure') || 0);
  await track.applyConstraints({
- advanced: [{ exposureCompensation: -0.5 }] 
+ advanced: [{ exposureCompensation: initialEV }] 
  });
- print("[システム] カメラの露出を -1.0 に設定しました。");
  }
  } catch (e) { console.log("露出補正非対応の端末です:", e); }
 
@@ -281,6 +301,25 @@ const video = document.getElementById('video');
  document.getElementById('camera-screen').style.display = 'block';
  } catch(err2) { alert("カメラの起動に失敗しました。"); }
  } finally { btn.innerText = "2. カメラを起動して撮影開始"; btn.disabled = false; }
+ }
+
+ /* 🌟【追加】スライダー操作時の「リアルタイム記憶＆HW露出更新」命令ファンクション */
+ function changeExposure(val) {
+ const ev = parseFloat(val);
+ document.getElementById('exposure-val').innerText = ev.toFixed(2);
+ localStorage.setItem('micro_exposure', val); // 記憶機能
+ 
+if (streamRef) {
+ try {
+ const track = streamRef.getVideoTracks()[0];
+ const capabilities = track.getCapabilities();
+ if (capabilities.exposureCompensation) {
+ track.applyConstraints({
+ advanced: [{ exposureCompensation: ev }]
+ });
+ }
+ } catch (e) { console.log("HW露出変更エラー:", e); }
+ }
  }
 
  function handleOrientation(event) {
@@ -311,6 +350,22 @@ const isVerticalPose = (Math.abs(gamma) >= 87 && Math.abs(gamma) <= 93) && isHor
 const sw = canvas.width / currentZoom; const sh = canvas.height / currentZoom;
  const sx = (canvas.width - sw) / 2; const sy = (canvas.height - sh) / 2;
  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+ 
+// 🌟【追加修正】ハードウェア非対応時のための「デジタル露出補正（Canvas保険）」処理
+ const evSetting = parseFloat(localStorage.getItem('micro_exposure') || 0);
+ const brightnessOffset = Math.round(evSetting * 35); // 1.0段あたり35ピクセル相当のオフセット計算
+ 
+if (brightnessOffset !== 0) {
+ const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+ const data = imgData.data;
+ for (let i = 0; i < data.length; i += 4) {
+ data[i] = Math.min(255, Math.max(0, data[i] + brightnessOffset)); // R
+ data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + brightnessOffset)); // G
+ data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + brightnessOffset)); // B
+ }
+ ctx.putImageData(imgData, 0, 0); // 補正画像をキャンバスへ再描画
+ }
+
  document.getElementById('camera-screen').style.display = 'none';
  if(streamRef) { streamRef.getTracks().forEach(t => t.stop()); streamRef = null; }
  sendImageToGoogleDrive(canvas.toDataURL('image/jpeg'));
